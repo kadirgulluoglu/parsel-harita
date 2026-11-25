@@ -3,159 +3,290 @@
 <head>
 <meta charset="utf-8">
 <meta name="robots" content="noindex, nofollow">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ÇKS Parselleri – Bozova (Karakaş / Dokuzağaç)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16181b" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Parseller">
+<title>ÇKS Parselleri – Bozova</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-  :root { --fistik:#e0a526; --arpa:#3fb6e8; --sel:#ff2d55; }
-  * { box-sizing:border-box; }
-  html,body { margin:0; height:100%; font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; color:#1c1c1e; }
-  #app { display:flex; height:100%; }
-  #side { width:320px; display:flex; flex-direction:column; border-right:1px solid #ddd; background:#fafafa; }
-  #side header { padding:14px 16px 10px; border-bottom:1px solid #e5e5e5; }
-  #side h1 { font-size:16px; margin:0 0 4px; }
-  #side .sub { color:#666; font-size:12px; }
-  .stats { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:10px; }
-  .stat { background:#fff; border:1px solid #e5e5e5; border-radius:8px; padding:6px 8px; }
-  .stat b { display:block; font-size:15px; font-variant-numeric:tabular-nums; }
-  .stat span { font-size:11px; color:#666; }
-  .filters { display:flex; gap:6px; padding:8px 16px; border-bottom:1px solid #e5e5e5; flex-wrap:wrap; }
-  .filters button { border:1px solid #ccc; background:#fff; border-radius:999px; padding:3px 10px; font-size:12px; cursor:pointer; }
-  .filters button.on { background:#1c1c1e; color:#fff; border-color:#1c1c1e; }
-  #search { margin:8px 16px; padding:6px 10px; border:1px solid #ccc; border-radius:6px; font-size:13px; }
-  #list { overflow:auto; flex:1; }
-  .row { display:flex; align-items:center; gap:8px; padding:7px 16px; border-bottom:1px solid #eee; cursor:pointer; }
-  .row:hover, .row.active { background:#fff3c4; }
-  .dot { width:10px; height:10px; border-radius:2px; flex:none; }
-  .row .ap { font-weight:600; font-variant-numeric:tabular-nums; min-width:62px; }
-  .row .meta { color:#666; font-size:12px; flex:1; }
-  .row .da { font-variant-numeric:tabular-nums; font-size:12px; }
-  #map { flex:1; }
-  .legend { background:#fff; padding:8px 10px; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,.3); font-size:12px; }
-  .legend div { display:flex; align-items:center; gap:6px; }
-  .lbl { background:rgba(0,0,0,.65); color:#fff; border:none; box-shadow:none; font-weight:600; font-size:11px; padding:1px 4px; border-radius:3px; }
+  :root {
+    --bg:#ffffff; --fg:#17191c; --muted:#5f6670; --line:#e4e7eb; --soft:#f2f4f6; --hover:#fff4cc;
+    --fistik:#e0a526; --arpa:#3fb6e8; --sel:#ff2d55; --accent:#1a73e8;
+    --sheet-shadow:0 -6px 28px rgba(0,0,0,.28);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16181b; --fg:#eef0f3; --muted:#9aa1ab; --line:#2c3036; --soft:#23262b; --hover:#3a3318; --accent:#6ea8ff; color-scheme: dark; }
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; height:100%; overflow:hidden; background:var(--bg); color:var(--fg);
+    font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  button { font:inherit; color:inherit; }
+
+  #map { position:fixed; inset:0; background:#2b2f2a; }
+
+  /* ---------- Alt panel (mobil) / yan panel (masaüstü) ---------- */
+  #sheet { position:fixed; left:0; right:0; bottom:0; z-index:1000;
+    height:88vh; height:88dvh; display:flex; flex-direction:column;
+    background:var(--bg); border-radius:18px 18px 0 0; box-shadow:var(--sheet-shadow);
+    transform:translateY(70vh); transition:transform .3s cubic-bezier(.2,.8,.2,1); will-change:transform; }
+  #sheet.dragging { transition:none; }
+  .head { padding:8px 16px 12px; touch-action:none; cursor:grab; user-select:none; }
+  .grip { width:42px; height:5px; border-radius:3px; background:var(--line); margin:0 auto 10px; }
+  .sum { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+  .sum h1 { font-size:17px; margin:0; letter-spacing:-.01em; }
+  .sum .tot { font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .sum .tot small { font-weight:500; color:var(--muted); }
+  .sub { color:var(--muted); font-size:12.5px; margin-top:2px; }
+  .chips { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .chip { display:inline-flex; align-items:center; gap:7px; background:var(--soft); border-radius:999px;
+    padding:5px 11px; font-size:13px; font-variant-numeric:tabular-nums; }
+  .chip b { font-weight:650; }
+  .dot { width:11px; height:11px; border-radius:3px; flex:none; }
+
+  /* Seçili parsel kartı */
+  #detail { margin:0 12px 10px; border:1px solid var(--line); border-radius:14px; padding:12px 14px; background:var(--bg); }
+  .dhead { display:flex; align-items:center; gap:8px; }
+  .dhead b { font-size:16px; }
+  .dhead .koy { color:var(--muted); font-size:13px; }
+  .dhead .x { margin-left:auto; width:32px; height:32px; border:none; background:var(--soft); border-radius:50%; font-size:18px; line-height:1; cursor:pointer; }
+  .dgrid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:10px; }
+  .dgrid div { background:var(--soft); border-radius:10px; padding:7px 9px; min-width:0; }
+  .dgrid span { display:block; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .dgrid b { font-variant-numeric:tabular-nums; font-size:15px; }
+  .dmeta { margin-top:8px; font-size:13px; color:var(--muted); }
+  .dact { display:flex; gap:8px; margin-top:10px; }
+  .dact a, .dact button { flex:1; display:flex; align-items:center; justify-content:center; gap:6px; min-height:42px;
+    border-radius:10px; border:1px solid var(--line); background:var(--bg); text-decoration:none; color:var(--fg); font-weight:600; font-size:14px; cursor:pointer; }
+  .dact a.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+
+  .controls { padding:0 16px 10px; display:flex; flex-direction:column; gap:10px; }
+  .filters { display:flex; gap:7px; overflow-x:auto; scrollbar-width:none; margin:0 -16px; padding:0 16px; }
+  .filters::-webkit-scrollbar { display:none; }
+  .filters button { flex:none; min-height:36px; padding:0 14px; border:1px solid var(--line); background:var(--bg);
+    border-radius:999px; font-size:14px; cursor:pointer; }
+  .filters button.on { background:var(--fg); color:var(--bg); border-color:var(--fg); }
+  #search { width:100%; font-size:16px; padding:10px 12px; border:1px solid var(--line); border-radius:10px;
+    background:var(--soft); color:var(--fg); outline:none; }
+  #search:focus { border-color:var(--accent); background:var(--bg); }
+  #list { flex:1; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
+    border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom, 0px); }
+  .row { display:flex; align-items:center; gap:10px; min-height:52px; padding:6px 16px; border-bottom:1px solid var(--line); cursor:pointer; }
+  .row:active, .row.active { background:var(--hover); }
+  .row .ap { font-weight:650; font-variant-numeric:tabular-nums; min-width:58px; }
+  .row .meta { color:var(--muted); font-size:13px; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row .da { font-variant-numeric:tabular-nums; font-size:14px; }
+  .row .da small { color:var(--muted); }
+  .empty { padding:24px 16px; color:var(--muted); text-align:center; }
+
+  /* Harita kontrolleri */
+  .leaflet-top { top:env(safe-area-inset-top, 0px); }
+  .leaflet-left { left:env(safe-area-inset-left, 0px); }
+  .leaflet-right { right:env(safe-area-inset-right, 0px); }
+  .mapbtn { width:44px; height:44px; display:flex; align-items:center; justify-content:center; background:#fff; color:#333;
+    border:none; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.35); cursor:pointer; margin-top:8px; }
+  .mapbtn.on { color:#1a73e8; }
+  .mapbtn svg { width:22px; height:22px; }
+  .lbl { background:rgba(0,0,0,.66); color:#fff; border:none; box-shadow:none; font-weight:650; font-size:11px; padding:1px 5px; border-radius:4px; }
   .lbl::before { display:none; }
-  .pop td { padding:1px 6px 1px 0; vertical-align:top; }
-  .pop td:first-child { color:#666; }
-  .locbtn { width:34px; height:34px; background:#fff; border:2px solid rgba(0,0,0,.2); border-radius:4px; font-size:20px; line-height:1; cursor:pointer; color:#333; }
-  .locbtn.on { color:#1a73e8; }
-  @media (max-width:700px){ #app{flex-direction:column-reverse;} #side{width:100%;height:42%;} }
+  .leaflet-control-attribution { font-size:9px; }
+  #toast { position:fixed; left:50%; top:calc(env(safe-area-inset-top, 0px) + 12px); transform:translateX(-50%); z-index:2000;
+    background:rgba(20,20,20,.9); color:#fff; padding:9px 14px; border-radius:10px; font-size:14px; max-width:90vw; }
+
+  /* Masaüstü: yan panel */
+  @media (min-width:768px) {
+    #map { left:360px; }
+    #sheet { top:0; right:auto; width:360px; height:auto; border-radius:0; transform:none !important; box-shadow:none; border-right:1px solid var(--line); }
+    .head { cursor:default; padding-top:16px; }
+    .grip { display:none; }
+    .mapbtn { width:36px; height:36px; border-radius:6px; }
+  }
+  @media (max-width:767px) {
+    .leaflet-control-zoom, .leaflet-control-scale { display:none; }
+  }
+  @media (prefers-reduced-motion: reduce) { #sheet { transition:none; } }
 </style>
 </head>
 <body>
-<div id="app">
-  <aside id="side">
-    <header>
-      <h1>ÇKS 2027 – Kayıtlı Parseller</h1>
-      <div class="sub">Şanlıurfa / Bozova · Karakaş &amp; Dokuzağaç · Kaynak: TKGM Parsel Sorgu</div>
-      <div class="stats">
-        <div class="stat"><b id="sCount"></b><span>parsel</span></div>
-        <div class="stat"><b id="sArea"></b><span>kullanılan alan (da)</span></div>
-        <div class="stat"><b id="sFistik"></b><span>Antep fıstığı (da)</span></div>
-        <div class="stat"><b id="sArpa"></b><span>Arpa (da)</span></div>
-      </div>
-    </header>
+<div id="map"></div>
+
+<section id="sheet" aria-label="Parsel listesi">
+  <div class="head" id="head">
+    <div class="grip"></div>
+    <div class="sum">
+      <h1>ÇKS 2027 Parseller</h1>
+      <div class="tot"><span id="sArea"></span> <small>da</small></div>
+    </div>
+    <div class="sub"><span id="sCount"></span> parsel · Bozova / Karakaş &amp; Dokuzağaç</div>
+    <div class="chips">
+      <span class="chip"><span class="dot" style="background:var(--fistik)"></span>Antep fıstığı <b id="sFistik"></b></span>
+      <span class="chip"><span class="dot" style="background:var(--arpa)"></span>Arpa <b id="sArpa"></b></span>
+    </div>
+  </div>
+
+  <div id="detail" hidden></div>
+
+  <div class="controls">
     <div class="filters" id="filters">
       <button data-f="all" class="on">Tümü</button>
       <button data-f="Antep Fıstığı">Antep fıstığı</button>
       <button data-f="Arpa">Arpa</button>
-      <button data-f="DOKUZAĞAÇ">Dokuzağaç</button>
       <button data-f="KARAKAŞ">Karakaş</button>
+      <button data-f="DOKUZAĞAÇ">Dokuzağaç</button>
     </div>
-    <input id="search" placeholder="Ada / parsel ara (ör. 135/4)">
-    <div id="list"></div>
-  </aside>
-  <div id="map"></div>
-</div>
+    <input id="search" type="search" inputmode="numeric" placeholder="Ada / parsel ara (ör. 135/4)" autocomplete="off">
+  </div>
+  <div id="list"></div>
+</section>
+<div id="toast" hidden></div>
+
 <script>
 window.PARSELLER={"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.45954,37.30849],[38.45934,37.30872],[38.45928,37.30879],[38.45743,37.30832],[38.45718,37.30761],[38.45725,37.30734],[38.45984,37.30811],[38.45954,37.30849]]]},"properties":{"no":1,"ada":108,"parsel":5,"tapu":19.858,"tasarruf":6.918,"kullanilan":6.918,"urun":"Antep Fıstığı","mulkiyet":"KM / KR","mahalle":"DOKUZAĞAÇ","tkgm_alan":"19.857,88","nitelik":"Fıstıklık","mevkii":"","pafta":"N40-B-20-D"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.45732,37.30705],[38.45734,37.30655],[38.45771,37.30618],[38.4581,37.30649],[38.45832,37.30665],[38.45857,37.307],[38.459,37.30735],[38.45938,37.30756],[38.46011,37.30781],[38.45997,37.30794],[38.45984,37.3081],[38.45984,37.30811],[38.45725,37.30734],[38.45732,37.30705]]]},"properties":{"no":2,"ada":108,"parsel":6,"tapu":19.841,"tasarruf":3.456,"kullanilan":3.456,"urun":"Antep Fıstığı","mulkiyet":"KR","mahalle":"DOKUZAĞAÇ","tkgm_alan":"19.841,23","nitelik":"Fıstıklık","mevkii":"","pafta":"N40-B-20-D"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.44779,37.30105],[38.44742,37.30085],[38.44707,37.30077],[38.44669,37.30058],[38.44622,37.30037],[38.44592,37.30016],[38.44596,37.30012],[38.44612,37.30004],[38.44626,37.29996],[38.44637,37.2999],[38.44647,37.29982],[38.44656,37.29977],[38.44667,37.29982],[38.44675,37.29982],[38.4468,37.29979],[38.44678,37.29969],[38.44695,37.29971],[38.44701,37.29958],[38.44833,37.29991],[38.4488,37.30003],[38.44823,37.30127],[38.44798,37.30116],[38.44779,37.30105]]]},"properties":{"no":3,"ada":111,"parsel":1,"tapu":25.211,"tasarruf":4.392,"kullanilan":4.392,"urun":"Antep Fıstığı","mulkiyet":"KR","mahalle":"DOKUZAĞAÇ","tkgm_alan":"25.211,43","nitelik":"Fıstıklık","mevkii":"","pafta":"N40-B-24-B"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.4553,37.33601],[38.45569,37.33632],[38.45519,37.33717],[38.45461,37.33719],[38.4553,37.33601]]]},"properties":{"no":4,"ada":102,"parsel":2,"tapu":5.78,"tasarruf":0.36,"kullanilan":0.36,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"5.779,71","nitelik":"Tarla","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.45694,37.33837],[38.45755,37.33831],[38.45795,37.33829],[38.45744,37.3393],[38.45596,37.33937],[38.45448,37.33944],[38.45391,37.33864],[38.45464,37.33816],[38.45535,37.33814],[38.45528,37.33832],[38.45588,37.33835],[38.45621,37.33845],[38.45694,37.33837]]]},"properties":{"no":5,"ada":103,"parsel":2,"tapu":36.539,"tasarruf":2.283,"kullanilan":1.568,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"36.538,60","nitelik":"Tarla","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.45694,37.33837],[38.45621,37.33845],[38.45588,37.33835],[38.45528,37.33832],[38.45535,37.33814],[38.45464,37.33816],[38.45495,37.3377],[38.45503,37.33756],[38.4568,37.33746],[38.4573,37.33749],[38.45694,37.33837]]]},"properties":{"no":6,"ada":103,"parsel":3,"tapu":18.432,"tasarruf":1.152,"kullanilan":1.152,"urun":"Antep Fıstığı","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"18.432,00","nitelik":"Bağ Ve Fıstık","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.4568,37.33746],[38.45503,37.33756],[38.45577,37.33631],[38.45603,37.33606],[38.45684,37.33605],[38.4568,37.33746]]]},"properties":{"no":7,"ada":103,"parsel":4,"tapu":18.935,"tasarruf":1.182,"kullanilan":1.182,"urun":"Antep Fıstığı","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"18.935,15","nitelik":"Fıstıklık","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.4568,37.33746],[38.45684,37.33605],[38.45603,37.33606],[38.45577,37.33631],[38.45531,37.33594],[38.45573,37.3359],[38.45571,37.33561],[38.45575,37.33549],[38.45589,37.33537],[38.45612,37.33534],[38.45616,37.33494],[38.45597,37.33489],[38.45558,37.33394],[38.45556,37.33373],[38.45563,37.33351],[38.45675,37.33374],[38.4568,37.33573],[38.45873,37.33575],[38.45869,37.33591],[38.45864,37.33623],[38.45861,37.33648],[38.45858,37.33688],[38.45803,37.33814],[38.45795,37.33829],[38.45755,37.33831],[38.45694,37.33837],[38.4573,37.33749],[38.4568,37.33746]]]},"properties":{"no":8,"ada":103,"parsel":5,"tapu":62.708,"tasarruf":3.918,"kullanilan":3.918,"urun":"Antep Fıstığı","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"62.708,47","nitelik":"Fıstıklık","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.45675,37.33374],[38.45907,37.33421],[38.45884,37.33469],[38.4588,37.33494],[38.45885,37.33517],[38.45885,37.33524],[38.45883,37.33546],[38.45881,37.33556],[38.45878,37.33563],[38.45874,37.33572],[38.45873,37.33575],[38.4568,37.33573],[38.45675,37.33374]]]},"properties":{"no":9,"ada":103,"parsel":6,"tapu":36.544,"tasarruf":2.283,"kullanilan":2.283,"urun":"Antep Fıstığı","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"36.544,00","nitelik":"Fıstıklık","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46561,37.34551],[38.46582,37.34573],[38.46605,37.34593],[38.46626,37.34611],[38.46668,37.34647],[38.46703,37.34674],[38.46739,37.34705],[38.46771,37.34732],[38.46812,37.34771],[38.46804,37.34774],[38.46648,37.34884],[38.4665,37.3493],[38.46606,37.34972],[38.4652,37.3495],[38.46419,37.34923],[38.46312,37.34894],[38.46307,37.34913],[38.46303,37.34916],[38.46294,37.34916],[38.46283,37.3492],[38.46266,37.34916],[38.46269,37.34693],[38.46273,37.3447],[38.464,37.34485],[38.46418,37.34391],[38.46432,37.34402],[38.46446,37.34416],[38.46475,37.34446],[38.46486,37.34459],[38.4651,37.34492],[38.46533,37.34519],[38.46561,37.34551]]]},"properties":{"no":10,"ada":104,"parsel":1,"tapu":183.042,"tasarruf":11.439,"kullanilan":11.439,"urun":"Antep Fıstığı","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"183.041,54","nitelik":"Tarla","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.45828,37.34282],[38.45893,37.34299],[38.45856,37.34379],[38.45944,37.34413],[38.45977,37.34471],[38.45973,37.34534],[38.45913,37.34548],[38.45862,37.34556],[38.45722,37.34559],[38.45581,37.34562],[38.45471,37.34558],[38.45357,37.34547],[38.45377,37.34524],[38.45394,37.34492],[38.45438,37.34418],[38.4548,37.34328],[38.45547,37.34192],[38.45612,37.34215],[38.45645,37.34228],[38.45702,37.34243],[38.45767,37.34264],[38.45828,37.34282]]]},"properties":{"no":11,"ada":104,"parsel":3,"tapu":146.36,"tasarruf":9.147,"kullanilan":8.684,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"146.360,17","nitelik":"Tarla","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46359,37.34259],[38.4635,37.34289],[38.46353,37.34306],[38.46359,37.34337],[38.46372,37.34353],[38.46399,37.34378],[38.46413,37.34387],[38.46394,37.34479],[38.46249,37.34462],[38.46138,37.34439],[38.46109,37.34402],[38.46058,37.34375],[38.46048,37.34338],[38.4594,37.34306],[38.4583,37.34277],[38.45769,37.34259],[38.45704,37.34238],[38.45648,37.34223],[38.45615,37.3421],[38.4555,37.34187],[38.45553,37.34181],[38.45636,37.34088],[38.45719,37.33995],[38.45749,37.33936],[38.4578,37.33962],[38.45767,37.33996],[38.45783,37.34022],[38.45806,37.3403],[38.45824,37.34055],[38.45828,37.34073],[38.45876,37.34099],[38.45917,37.34107],[38.45939,37.341],[38.45949,37.34072],[38.45996,37.34051],[38.46102,37.34011],[38.46159,37.33979],[38.46193,37.33902],[38.4622,37.33892],[38.46234,37.33902],[38.4625,37.33934],[38.46262,37.33965],[38.46278,37.33996],[38.46284,37.34015],[38.46289,37.34026],[38.46296,37.34035],[38.4631,37.34044],[38.4632,37.34061],[38.4633,37.34082],[38.46341,37.34115],[38.46349,37.34144],[38.46355,37.34174],[38.46366,37.34209],[38.46359,37.34259]]]},"properties":{"no":12,"ada":106,"parsel":1,"tapu":241.021,"tasarruf":15.063,"kullanilan":15.063,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"241.020,66","nitelik":"Tarla","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46396,37.33729],[38.46397,37.3373],[38.46444,37.3376],[38.46464,37.33774],[38.46466,37.3399],[38.46469,37.34207],[38.46594,37.34203],[38.4661,37.34058],[38.46625,37.33912],[38.46653,37.33929],[38.46727,37.33963],[38.46704,37.34103],[38.46682,37.34243],[38.46923,37.34346],[38.47165,37.3445],[38.46995,37.34607],[38.46826,37.34765],[38.46819,37.34768],[38.46776,37.34728],[38.46744,37.34701],[38.46708,37.3467],[38.46673,37.34643],[38.46631,37.34607],[38.4661,37.3459],[38.46587,37.34569],[38.46567,37.34548],[38.46538,37.34516],[38.46515,37.34489],[38.46492,37.34456],[38.46481,37.34443],[38.46451,37.34413],[38.46437,37.34399],[38.46421,37.34385],[38.46404,37.34374],[38.46377,37.34349],[38.46366,37.34335],[38.46359,37.34305],[38.46357,37.34289],[38.46366,37.34259],[38.46373,37.34208],[38.46361,37.34172],[38.46356,37.34143],[38.46348,37.34114],[38.46336,37.3408],[38.46327,37.34059],[38.46315,37.3404],[38.46301,37.34031],[38.46295,37.34024],[38.46291,37.34013],[38.46284,37.33994],[38.46268,37.33963],[38.46256,37.33932],[38.46239,37.33899],[38.46225,37.33889],[38.46218,37.33878],[38.46212,37.33859],[38.46207,37.33845],[38.46202,37.33833],[38.46205,37.33817],[38.46209,37.33799],[38.46206,37.3378],[38.46197,37.33746],[38.46396,37.33729]]]},"properties":{"no":13,"ada":107,"parsel":2,"tapu":341.66,"tasarruf":13.248,"kullanilan":12.716,"urun":"Arpa","mulkiyet":"KM / KR","mahalle":"KARAKAŞ","tkgm_alan":"341.659,56","nitelik":"Tarla","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46594,37.34203],[38.46469,37.34207],[38.46466,37.3399],[38.46464,37.33774],[38.46473,37.33781],[38.46568,37.33859],[38.46603,37.33898],[38.46625,37.33912],[38.4661,37.34058],[38.46594,37.34203]]]},"properties":{"no":14,"ada":107,"parsel":3,"tapu":52.035,"tasarruf":3.251,"kullanilan":3.251,"urun":"Antep Fıstığı","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"52.034,87","nitelik":"Fıstıklık","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46695,37.34237],[38.46717,37.34103],[38.46738,37.33968],[38.46793,37.33994],[38.46972,37.34071],[38.47165,37.34161],[38.47349,37.34248],[38.4737,37.34259],[38.47271,37.3435],[38.47173,37.34442],[38.46934,37.34339],[38.46695,37.34237]]]},"properties":{"no":15,"ada":108,"parsel":1,"tapu":154.069,"tasarruf":5.974,"kullanilan":5.974,"urun":"Antep Fıstığı","mulkiyet":"KM / KR","mahalle":"KARAKAŞ","tkgm_alan":"154.069,14","nitelik":"Tarla","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46796,37.33989],[38.46657,37.33925],[38.46649,37.3392],[38.46706,37.33814],[38.46701,37.33801],[38.46724,37.33752],[38.46738,37.33701],[38.46657,37.33665],[38.46649,37.33687],[38.46435,37.3358],[38.464,37.33624],[38.46369,37.33634],[38.46338,37.33678],[38.46326,37.33669],[38.46239,37.33603],[38.46248,37.33594],[38.46269,37.33571],[38.46281,37.33561],[38.46295,37.33553],[38.46343,37.33533],[38.46357,37.33522],[38.46379,37.33491],[38.46394,37.33477],[38.46419,37.33489],[38.465,37.3353],[38.46592,37.33574],[38.46689,37.33621],[38.46786,37.33669],[38.46868,37.3371],[38.47012,37.33783],[38.47098,37.33826],[38.4722,37.33895],[38.47358,37.33985],[38.47533,37.34107],[38.47374,37.34255],[38.47352,37.34244],[38.47168,37.34156],[38.46976,37.34066],[38.46796,37.33989]]]},"properties":{"no":16,"ada":109,"parsel":2,"tapu":257.831,"tasarruf":9.998,"kullanilan":9.998,"urun":"Antep Fıstığı","mulkiyet":"KM / KR","mahalle":"KARAKAŞ","tkgm_alan":"257.830,72","nitelik":"Tarla","mevkii":"","pafta":"N40b20a/B"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.47547,37.34114],[38.4771,37.34225],[38.47803,37.34286],[38.4778,37.34313],[38.47762,37.34336],[38.47735,37.34374],[38.47704,37.34415],[38.47546,37.34338],[38.47389,37.34261],[38.47547,37.34114]]]},"properties":{"no":17,"ada":110,"parsel":1,"tapu":59.184,"tasarruf":2.293,"kullanilan":2.293,"urun":"Antep Fıstığı","mulkiyet":"KM / KR","mahalle":"KARAKAŞ","tkgm_alan":"59.184,25","nitelik":"Tarla","mevkii":"","pafta":"N40b20a/B"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.47384,37.34266],[38.47542,37.34343],[38.47701,37.3442],[38.47685,37.34441],[38.47658,37.3448],[38.47629,37.34514],[38.47609,37.34533],[38.476,37.34542],[38.47562,37.34589],[38.47536,37.34567],[38.47527,37.34566],[38.47497,37.34546],[38.47484,37.34532],[38.47416,37.34509],[38.47372,37.34546],[38.47336,37.34575],[38.47294,37.34608],[38.47247,37.34647],[38.47239,37.34655],[38.47197,37.34689],[38.47158,37.34719],[38.47124,37.34695],[38.47087,37.3466],[38.47068,37.34648],[38.4705,37.34646],[38.4704,37.34647],[38.47013,37.34652],[38.47004,37.34657],[38.46975,37.34659],[38.46972,37.34674],[38.46974,37.34693],[38.46986,37.34725],[38.4699,37.34733],[38.46925,37.3475],[38.4684,37.34771],[38.46976,37.34645],[38.47112,37.34519],[38.47248,37.34392],[38.47384,37.34266]]]},"properties":{"no":18,"ada":111,"parsel":1,"tapu":139.212,"tasarruf":5.398,"kullanilan":5.398,"urun":"Antep Fıstığı","mulkiyet":"KM / KR","mahalle":"KARAKAŞ","tkgm_alan":"139.212,37","nitelik":"Tarla","mevkii":"","pafta":"N40b20a/B"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.48676,37.31834],[38.48514,37.31909],[38.48351,37.31984],[38.48323,37.32098],[38.48273,37.32219],[38.48163,37.32304],[38.48155,37.32296],[38.48149,37.32285],[38.48123,37.3222],[38.48101,37.32159],[38.48087,37.32014],[38.48341,37.31727],[38.48151,37.31567],[38.48244,37.3157],[38.4846,37.31702],[38.48676,37.31834]]]},"properties":{"no":19,"ada":116,"parsel":1,"tapu":156.299,"tasarruf":3.995,"kullanilan":3.324,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"156.298,62","nitelik":"Tarla","mevkii":"","pafta":"N40b20c"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.48014,37.31287],[38.48022,37.31286],[38.48065,37.3127],[38.48093,37.31256],[38.48116,37.31288],[38.48131,37.31406],[38.48131,37.31468],[38.48121,37.31493],[38.48056,37.31522],[38.47954,37.31525],[38.47949,37.31514],[38.4794,37.31501],[38.47938,37.31494],[38.47936,37.31476],[38.47922,37.31458],[38.47934,37.31451],[38.47943,37.31449],[38.47942,37.31439],[38.47939,37.31423],[38.47944,37.31409],[38.47946,37.31397],[38.4794,37.31381],[38.47931,37.31365],[38.47921,37.31345],[38.47921,37.31342],[38.48014,37.31287]]]},"properties":{"no":20,"ada":116,"parsel":3,"tapu":42.475,"tasarruf":1.085,"kullanilan":0.85,"urun":"Antep Fıstığı","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"42.474,77","nitelik":"Tarla","mevkii":"","pafta":"N40b20c"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.49228,37.30777],[38.49311,37.30729],[38.49334,37.30726],[38.49349,37.30766],[38.49379,37.30854],[38.49404,37.30927],[38.49261,37.30955],[38.49117,37.30984],[38.4911,37.30933],[38.48976,37.30982],[38.48956,37.30929],[38.48964,37.30919],[38.49061,37.3087],[38.49228,37.30777]]]},"properties":{"no":21,"ada":117,"parsel":2,"tapu":58.775,"tasarruf":1.502,"kullanilan":1.502,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"58.774,62","nitelik":"Tarla","mevkii":"","pafta":"N40b20b/C/N41a16a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.48012,37.3097],[38.48042,37.30998],[38.48055,37.31042],[38.48004,37.3116],[38.47953,37.31279],[38.4794,37.3128],[38.47916,37.31271],[38.47916,37.31268],[38.47902,37.31195],[38.47846,37.31203],[38.47786,37.31211],[38.47739,37.31218],[38.47737,37.31206],[38.47736,37.31188],[38.47731,37.31129],[38.47717,37.31083],[38.47714,37.31011],[38.4775,37.30945],[38.47768,37.30876],[38.47782,37.30861],[38.47798,37.3085],[38.47815,37.30822],[38.47815,37.30799],[38.47826,37.30764],[38.47823,37.30741],[38.47818,37.30733],[38.47825,37.30719],[38.47859,37.30743],[38.47914,37.30797],[38.47953,37.30859],[38.48012,37.3097]]]},"properties":{"no":22,"ada":119,"parsel":2,"tapu":110.104,"tasarruf":2.814,"kullanilan":0.44,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"110.103,90","nitelik":"Tarla","mevkii":"","pafta":"N40b20c"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.48291,37.31116],[38.48288,37.31028],[38.48163,37.30987],[38.48186,37.30926],[38.48278,37.3095],[38.48518,37.30985],[38.48557,37.30981],[38.48552,37.30922],[38.48706,37.30903],[38.48725,37.30945],[38.48749,37.31059],[38.48731,37.31065],[38.4872,37.31071],[38.48709,37.31076],[38.48698,37.3108],[38.48687,37.31081],[38.48675,37.31081],[38.48642,37.31077],[38.48623,37.31079],[38.48596,37.31086],[38.48577,37.31089],[38.4856,37.31093],[38.4854,37.31098],[38.48506,37.31104],[38.48489,37.31109],[38.48466,37.31117],[38.4845,37.3112],[38.48428,37.31123],[38.48409,37.31125],[38.48393,37.31129],[38.48362,37.31139],[38.4834,37.3115],[38.48322,37.31162],[38.48306,37.31166],[38.48283,37.31176],[38.48266,37.31185],[38.48245,37.31192],[38.48244,37.31141],[38.48291,37.31116]]]},"properties":{"no":23,"ada":119,"parsel":3,"tapu":81.206,"tasarruf":2.075,"kullanilan":2.075,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"81.205,97","nitelik":"Tarla","mevkii":"","pafta":"N40b20c"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.49065,37.30847],[38.49005,37.30876],[38.48982,37.30889],[38.48965,37.30903],[38.48962,37.30907],[38.48912,37.30786],[38.49053,37.30741],[38.49025,37.30629],[38.48998,37.30517],[38.49025,37.30506],[38.49118,37.30469],[38.49189,37.3046],[38.49236,37.30539],[38.49248,37.30586],[38.49274,37.30658],[38.49304,37.3065],[38.49317,37.30686],[38.49324,37.30701],[38.49285,37.30713],[38.49271,37.30721],[38.49228,37.30759],[38.49201,37.30774],[38.49146,37.308],[38.49111,37.30817],[38.49065,37.30847]]]},"properties":{"no":24,"ada":119,"parsel":4,"tapu":86.153,"tasarruf":2.202,"kullanilan":2.202,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"86.152,62","nitelik":"Tarla","mevkii":"","pafta":"N40b20c"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46533,37.31145],[38.46349,37.31101],[38.46375,37.30981],[38.46462,37.31043],[38.46522,37.31096],[38.46624,37.31163],[38.46684,37.31182],[38.46758,37.31225],[38.4666,37.31226],[38.46708,37.31291],[38.46517,37.31309],[38.46533,37.31145]]]},"properties":{"no":25,"ada":120,"parsel":1,"tapu":40.329,"tasarruf":1.03,"kullanilan":0.6,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"40.328,63","nitelik":"Tarla","mevkii":"","pafta":"N40b20d"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.47246,37.31294],[38.4722,37.31274],[38.47123,37.31136],[38.47025,37.30998],[38.47162,37.30877],[38.47299,37.30755],[38.47321,37.3086],[38.47289,37.31034],[38.47316,37.31105],[38.47419,37.31176],[38.47381,37.31215],[38.47521,37.31265],[38.47677,37.31212],[38.47688,37.31227],[38.47697,37.31234],[38.47704,37.31237],[38.47717,37.31236],[38.47723,37.31237],[38.47732,37.31242],[38.47739,37.3125],[38.47745,37.31272],[38.47747,37.31279],[38.47744,37.31281],[38.47726,37.31292],[38.47703,37.31307],[38.47682,37.31322],[38.4767,37.31333],[38.47663,37.31344],[38.47659,37.31359],[38.4766,37.31376],[38.47661,37.31378],[38.47612,37.31387],[38.47539,37.31395],[38.47489,37.31387],[38.47428,37.3137],[38.47366,37.3138],[38.473,37.31345],[38.47258,37.31332],[38.47246,37.31294]]]},"properties":{"no":26,"ada":120,"parsel":4,"tapu":152.803,"tasarruf":3.906,"kullanilan":1.584,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"152.802,80","nitelik":"Tarla","mevkii":"","pafta":"N40b20c/D"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.47424,37.30469],[38.47382,37.30457],[38.47348,37.3044],[38.4731,37.30415],[38.47269,37.30383],[38.47249,37.30361],[38.47222,37.30337],[38.47177,37.30311],[38.47137,37.30282],[38.47073,37.30236],[38.47037,37.30217],[38.46978,37.30186],[38.46924,37.30171],[38.46898,37.30164],[38.46897,37.3013],[38.46984,37.30148],[38.47029,37.30152],[38.47057,37.30148],[38.47085,37.30136],[38.47093,37.30117],[38.47112,37.30092],[38.47151,37.30142],[38.47159,37.30152],[38.47198,37.30196],[38.47311,37.30333],[38.47424,37.30469]]]},"properties":{"no":27,"ada":122,"parsel":1,"tapu":42.971,"tasarruf":1.098,"kullanilan":1.098,"urun":"Antep Fıstığı","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"42.970,62","nitelik":"Tarla","mevkii":"","pafta":"N40b20d"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.48147,37.29477],[38.48066,37.29559],[38.48029,37.29554],[38.48101,37.29356],[38.48198,37.29339],[38.48321,37.29318],[38.48429,37.293],[38.48444,37.29294],[38.48456,37.29295],[38.48474,37.29313],[38.48497,37.29323],[38.48512,37.29332],[38.48523,37.2935],[38.48503,37.29413],[38.48384,37.29481],[38.48147,37.29477]]]},"properties":{"no":28,"ada":123,"parsel":2,"tapu":66.078,"tasarruf":1.689,"kullanilan":1.689,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"66.078,16","nitelik":"Tarla","mevkii":"","pafta":"N40b25b"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.47432,37.29757],[38.47427,37.29824],[38.47413,37.29869],[38.47298,37.29873],[38.473,37.29845],[38.47309,37.29792],[38.47314,37.29726],[38.47313,37.29679],[38.47318,37.29622],[38.47322,37.29578],[38.47322,37.29556],[38.4734,37.2951],[38.4735,37.2949],[38.47406,37.29483],[38.47388,37.29524],[38.47392,37.29558],[38.47414,37.2956],[38.47433,37.29613],[38.47432,37.29757]]]},"properties":{"no":29,"ada":123,"parsel":3,"tapu":39.742,"tasarruf":1.015,"kullanilan":1.015,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"39.741,59","nitelik":"Tarla","mevkii":"","pafta":"N40b25a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.47387,37.30266],[38.47433,37.30318],[38.4745,37.30353],[38.47384,37.30374],[38.47432,37.30437],[38.47418,37.30444],[38.47313,37.30317],[38.47208,37.3019],[38.47191,37.30171],[38.4729,37.30135],[38.4732,37.30183],[38.47347,37.30197],[38.47387,37.30266]]]},"properties":{"no":30,"ada":123,"parsel":4,"tapu":26.463,"tasarruf":0.676,"kullanilan":0.676,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"26.462,87","nitelik":"Tarla","mevkii":"","pafta":"N40b20d"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.47098,37.29951],[38.47049,37.29939],[38.47043,37.29913],[38.47072,37.29891],[38.47139,37.29794],[38.47164,37.29746],[38.47214,37.29727],[38.4724,37.29678],[38.47244,37.2961],[38.4727,37.29535],[38.4731,37.29454],[38.47329,37.29451],[38.47362,37.29447],[38.47331,37.29508],[38.47313,37.29555],[38.47313,37.29577],[38.47309,37.29621],[38.47304,37.29679],[38.47305,37.29726],[38.473,37.29792],[38.47291,37.29844],[38.47289,37.2987],[38.47262,37.29899],[38.47219,37.29935],[38.47206,37.29969],[38.47205,37.30008],[38.47208,37.30056],[38.47205,37.30088],[38.47179,37.30157],[38.4717,37.30147],[38.47162,37.30137],[38.47119,37.30083],[38.47124,37.30067],[38.47098,37.29951]]]},"properties":{"no":31,"ada":124,"parsel":1,"tapu":69.467,"tasarruf":1.775,"kullanilan":1.775,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"69.466,51","nitelik":"Tarla","mevkii":"","pafta":"N40b20d/25A"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46491,37.299],[38.4649,37.29892],[38.46484,37.29881],[38.46481,37.29868],[38.46478,37.29856],[38.46475,37.29844],[38.46472,37.29835],[38.4647,37.29819],[38.46467,37.29802],[38.46464,37.2978],[38.46463,37.29766],[38.4646,37.2975],[38.4646,37.29729],[38.46461,37.29715],[38.4646,37.29699],[38.46459,37.29679],[38.46456,37.29656],[38.46453,37.29644],[38.46452,37.29633],[38.46449,37.29617],[38.46446,37.29595],[38.46442,37.29577],[38.46441,37.29568],[38.46438,37.29559],[38.46436,37.29549],[38.46431,37.29536],[38.46426,37.29522],[38.46417,37.29505],[38.46411,37.29492],[38.46406,37.29481],[38.46402,37.29467],[38.46399,37.29458],[38.46397,37.29436],[38.46395,37.29418],[38.46392,37.29403],[38.46388,37.29381],[38.46386,37.29374],[38.46385,37.29369],[38.46385,37.29361],[38.46384,37.2935],[38.46385,37.29335],[38.46386,37.29321],[38.4639,37.29305],[38.46395,37.29296],[38.46404,37.29285],[38.46409,37.29276],[38.46415,37.29262],[38.46419,37.29251],[38.46424,37.29241],[38.46432,37.29228],[38.46443,37.29216],[38.46454,37.29203],[38.46466,37.2919],[38.4647,37.29225],[38.46473,37.29244],[38.46483,37.29281],[38.46488,37.29301],[38.46496,37.2934],[38.46504,37.29376],[38.4651,37.29408],[38.46514,37.29442],[38.46518,37.29457],[38.4653,37.29505],[38.46543,37.29551],[38.46552,37.29579],[38.46616,37.29693],[38.46631,37.29723],[38.46676,37.29832],[38.46722,37.29942],[38.46755,37.2999],[38.46879,37.30083],[38.46881,37.3016],[38.46866,37.30156],[38.46829,37.30144],[38.46776,37.30132],[38.46738,37.30126],[38.46693,37.30121],[38.46658,37.30111],[38.46613,37.301],[38.46574,37.30104],[38.46543,37.30096],[38.46505,37.30092],[38.46449,37.30097],[38.4646,37.30073],[38.46471,37.30031],[38.46476,37.30014],[38.46482,37.29992],[38.46488,37.29957],[38.46492,37.29922],[38.46491,37.299]]]},"properties":{"no":32,"ada":125,"parsel":1,"tapu":157.324,"tasarruf":4.021,"kullanilan":4.021,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"157.324,11","nitelik":"Tarla","mevkii":"","pafta":"N40b20d/25A"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46297,37.30308],[38.46311,37.30284],[38.46328,37.3026],[38.46342,37.3024],[38.46353,37.3022],[38.4637,37.30199],[38.46389,37.3018],[38.46404,37.30167],[38.46419,37.3015],[38.46435,37.30133],[38.46448,37.30112],[38.46451,37.30105],[38.46505,37.30099],[38.46541,37.30103],[38.46573,37.30112],[38.46612,37.30107],[38.46655,37.30118],[38.46691,37.30128],[38.46706,37.3013],[38.46671,37.30352],[38.46661,37.30395],[38.46477,37.30355],[38.46293,37.30315],[38.46297,37.30308]]]},"properties":{"no":33,"ada":126,"parsel":1,"tapu":81.228,"tasarruf":2.076,"kullanilan":2.076,"urun":"Antep Fıstığı","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"81.228,29","nitelik":"Tarla","mevkii":"","pafta":"N40b20d"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.4602,37.30787],[38.46142,37.30847],[38.46264,37.30908],[38.46372,37.30961],[38.4636,37.30976],[38.46333,37.311],[38.46158,37.31062],[38.45882,37.31034],[38.45887,37.31021],[38.45906,37.30966],[38.45919,37.30931],[38.45936,37.30894],[38.45949,37.30871],[38.4602,37.30787]]]},"properties":{"no":34,"ada":127,"parsel":1,"tapu":86.819,"tasarruf":2.219,"kullanilan":2.19,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"86.819,39","nitelik":"Tarla","mevkii":"","pafta":"N40b20d"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46264,37.30908],[38.46142,37.30847],[38.4602,37.30787],[38.46026,37.30784],[38.46029,37.30779],[38.46042,37.30766],[38.46061,37.30742],[38.46081,37.30706],[38.46111,37.30654],[38.46146,37.306],[38.46169,37.30555],[38.46184,37.30531],[38.46199,37.30505],[38.4621,37.30479],[38.46224,37.30453],[38.46235,37.30429],[38.46245,37.30408],[38.46258,37.30384],[38.46271,37.30356],[38.46284,37.30334],[38.46286,37.30329],[38.46288,37.30325],[38.46518,37.30375],[38.46455,37.30508],[38.46391,37.30641],[38.46327,37.30774],[38.46264,37.30908]]]},"properties":{"no":35,"ada":127,"parsel":3,"tapu":132.871,"tasarruf":3.396,"kullanilan":3.396,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"132.871,36","nitelik":"Tarla","mevkii":"","pafta":"N40b20d"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46331,37.3111],[38.46515,37.31154],[38.46501,37.3131],[38.46486,37.31466],[38.46282,37.31468],[38.46079,37.31469],[38.45875,37.31471],[38.45672,37.31472],[38.45673,37.31462],[38.45669,37.31447],[38.45658,37.31424],[38.45642,37.31393],[38.45639,37.31388],[38.45629,37.31373],[38.45619,37.3136],[38.45609,37.31347],[38.45603,37.31334],[38.45592,37.31316],[38.45587,37.31305],[38.45583,37.31292],[38.45581,37.31278],[38.4558,37.31268],[38.45596,37.31245],[38.45618,37.31221],[38.45629,37.31213],[38.45678,37.31165],[38.45711,37.31133],[38.45745,37.31113],[38.45803,37.31088],[38.45843,37.31072],[38.45874,37.31061],[38.45879,37.31044],[38.46156,37.31072],[38.46331,37.3111]]]},"properties":{"no":36,"ada":128,"parsel":1,"tapu":322.035,"tasarruf":8.233,"kullanilan":8.186,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"322.035,37","nitelik":"Tarla","mevkii":"","pafta":"N40b20d"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46272,37.31796],[38.46266,37.31794],[38.46318,37.31774],[38.46373,37.31731],[38.46421,37.31724],[38.46462,37.31718],[38.46451,37.31834],[38.4644,37.3195],[38.46429,37.32066],[38.46418,37.32182],[38.46382,37.32179],[38.4638,37.32179],[38.46378,37.3214],[38.46379,37.32125],[38.46381,37.32109],[38.46388,37.32092],[38.46391,37.32062],[38.4639,37.32046],[38.46366,37.32007],[38.4635,37.31961],[38.46349,37.31958],[38.46339,37.31932],[38.46329,37.319],[38.4632,37.31864],[38.46309,37.31845],[38.46287,37.31815],[38.46272,37.31796]]]},"properties":{"no":37,"ada":129,"parsel":1,"tapu":40.778,"tasarruf":1.042,"kullanilan":0.287,"urun":"Antep Fıstığı","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"40.778,19","nitelik":"Tarla","mevkii":"","pafta":"N40b20d"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46476,37.3157],[38.46383,37.3157],[38.46421,37.31724],[38.46373,37.31731],[38.46318,37.31774],[38.46266,37.31794],[38.46263,37.3179],[38.4625,37.3178],[38.46234,37.3177],[38.46214,37.31759],[38.46202,37.31751],[38.46185,37.31736],[38.46158,37.3171],[38.46136,37.3169],[38.46125,37.31676],[38.46116,37.31661],[38.46102,37.31643],[38.46098,37.31637],[38.46078,37.31618],[38.46056,37.31607],[38.46023,37.31594],[38.45996,37.31586],[38.45947,37.31581],[38.45912,37.31578],[38.45865,37.31575],[38.45846,37.31573],[38.4582,37.31571],[38.45788,37.31567],[38.45756,37.3156],[38.4575,37.31559],[38.45747,37.31559],[38.45689,37.31545],[38.45651,37.31534],[38.45657,37.31522],[38.45665,37.31508],[38.45667,37.31499],[38.45671,37.31482],[38.45874,37.3148],[38.46078,37.31479],[38.46281,37.31478],[38.46485,37.31476],[38.46476,37.3157]]]},"properties":{"no":38,"ada":129,"parsel":3,"tapu":127.301,"tasarruf":3.254,"kullanilan":3.254,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"127.300,68","nitelik":"Tarla","mevkii":"","pafta":"N40b20d"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46475,37.32702],[38.46484,37.32723],[38.46464,37.32744],[38.46371,37.32845],[38.4629,37.32933],[38.46277,37.32947],[38.46262,37.32934],[38.46369,37.32818],[38.46475,37.32702]]]},"properties":{"no":39,"ada":130,"parsel":2,"tapu":6.177,"tasarruf":0.385,"kullanilan":0.385,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"6.177,16","nitelik":"Tarla","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46049,37.32775],[38.46184,37.32688],[38.46319,37.32601],[38.4628,37.32759],[38.46242,37.32916],[38.46204,37.32915],[38.46032,37.32912],[38.46014,37.32868],[38.46049,37.32775]]]},"properties":{"no":40,"ada":130,"parsel":3,"tapu":50.974,"tasarruf":3.185,"kullanilan":2.801,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"50.973,97","nitelik":"Tarla","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46459,37.32664],[38.46475,37.32702],[38.46369,37.32818],[38.46262,37.32934],[38.46242,37.32916],[38.4628,37.32759],[38.46319,37.32601],[38.46371,37.32389],[38.46367,37.32299],[38.46407,37.32301],[38.46398,37.32389],[38.46429,37.32527],[38.46459,37.32664]]]},"properties":{"no":41,"ada":130,"parsel":4,"tapu":57.212,"tasarruf":3.575,"kullanilan":2.693,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"57.212,40","nitelik":"Tarla","mevkii":"","pafta":"N40b20a/D"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46629,37.3257],[38.46563,37.32641],[38.46496,37.3271],[38.46475,37.32661],[38.46445,37.32525],[38.46415,37.32389],[38.46423,37.32303],[38.46637,37.32318],[38.46851,37.32333],[38.46792,37.32397],[38.46714,37.32481],[38.46629,37.3257]]]},"properties":{"no":42,"ada":131,"parsel":1,"tapu":91.307,"tasarruf":5.706,"kullanilan":1.632,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"91.307,05","nitelik":"Tarla","mevkii":"","pafta":"N40b20a/D"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46981,37.32195],[38.46893,37.32288],[38.46867,37.32316],[38.46807,37.32311],[38.46843,37.32273],[38.46976,37.32131],[38.47036,37.32136],[38.46981,37.32195]]]},"properties":{"no":43,"ada":131,"parsel":3,"tapu":11.367,"tasarruf":0.29,"kullanilan":0.29,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"11.367,06","nitelik":"Tarla","mevkii":"","pafta":"N40b20d"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46439,37.32136],[38.46453,37.31982],[38.46468,37.31828],[38.46545,37.31819],[38.4658,37.3193],[38.46631,37.31923],[38.46647,37.32105],[38.46439,37.32136]]]},"properties":{"no":44,"ada":131,"parsel":5,"tapu":46.256,"tasarruf":1.182,"kullanilan":0.372,"urun":"Antep Fıstığı","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"46.255,92","nitelik":"Tarla","mevkii":"","pafta":"N40b20d"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.47196,37.31946],[38.47192,37.31927],[38.47167,37.31887],[38.47143,37.31827],[38.47182,37.31804],[38.47167,37.31729],[38.47164,37.31678],[38.47178,37.31673],[38.47202,37.31671],[38.47218,37.31675],[38.47351,37.3178],[38.47196,37.31946]]]},"properties":{"no":45,"ada":132,"parsel":2,"tapu":28.855,"tasarruf":0.737,"kullanilan":0.737,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"28.855,32","nitelik":"Tarla","mevkii":"","pafta":"N40b20d"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.47382,37.31747],[38.47351,37.3174],[38.47284,37.31698],[38.47258,37.31675],[38.4724,37.31666],[38.4722,37.31642],[38.47202,37.31618],[38.47189,37.31593],[38.47175,37.31562],[38.47194,37.31478],[38.47185,37.31291],[38.47208,37.31277],[38.47217,37.31279],[38.4724,37.31297],[38.47252,37.31336],[38.47297,37.3135],[38.47364,37.31385],[38.47428,37.31375],[38.47487,37.31392],[38.47539,37.31401],[38.47613,37.31392],[38.47664,37.31383],[38.47666,37.31388],[38.4768,37.31394],[38.47697,37.31396],[38.47694,37.31398],[38.47654,37.31413],[38.47619,37.31427],[38.47631,37.31453],[38.47642,37.31465],[38.4766,37.31477],[38.47567,37.31573],[38.47492,37.31652],[38.47484,37.3166],[38.4747,37.31652],[38.47382,37.31747]]]},"properties":{"no":46,"ada":132,"parsel":5,"tapu":127.903,"tasarruf":3.269,"kullanilan":2.839,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"127.902,66","nitelik":"Tarla Ve Fıstıklık","mevkii":"","pafta":"N40b20c/D"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.47005,37.31463],[38.46754,37.31464],[38.46502,37.31466],[38.46517,37.31315],[38.46706,37.31297],[38.46728,37.31311],[38.46757,37.31315],[38.46809,37.31305],[38.46881,37.31307],[38.46917,37.31337],[38.46959,37.31388],[38.46974,37.3142],[38.47005,37.31463]]]},"properties":{"no":47,"ada":132,"parsel":7,"tapu":68.298,"tasarruf":1.745,"kullanilan":1.334,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"68.297,86","nitelik":"Tarla","mevkii":"","pafta":"N40b20d"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.47376,37.3179],[38.4744,37.31722],[38.47501,37.31657],[38.47576,37.31578],[38.47668,37.31484],[38.47679,37.31494],[38.47685,37.31495],[38.47693,37.31489],[38.47703,37.3149],[38.47688,37.31587],[38.47731,37.31603],[38.47728,37.31622],[38.47716,37.31687],[38.47687,37.31764],[38.47684,37.31785],[38.47677,37.31846],[38.47664,37.3189],[38.47657,37.31938],[38.47637,37.31927],[38.47524,37.31867],[38.47376,37.3179]]]},"properties":{"no":48,"ada":133,"parsel":11,"tapu":77.343,"tasarruf":1.977,"kullanilan":1.11,"urun":"Antep Fıstığı","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"77.343,14","nitelik":"Tarla Ve Fıstıklık","mevkii":"","pafta":"N40b20c/D"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.47019,37.32212],[38.46994,37.32196],[38.47058,37.32127],[38.47174,37.32199],[38.4711,37.32267],[38.47019,37.32212]]]},"properties":{"no":49,"ada":133,"parsel":14,"tapu":12.365,"tasarruf":0.315,"kullanilan":0.285,"urun":"Antep Fıstığı","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"12.364,54","nitelik":"Tarla","mevkii":"","pafta":"N40b20d"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46659,37.32601],[38.46633,37.3258],[38.46638,37.32575],[38.46723,37.32486],[38.46801,37.32402],[38.46864,37.32334],[38.46904,37.32336],[38.46781,37.32469],[38.46659,37.32601]]]},"properties":{"no":50,"ada":133,"parsel":16,"tapu":10.702,"tasarruf":0.668,"kullanilan":0.028,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"10.702,33","nitelik":"Tarla","mevkii":"","pafta":"N40b20a/D"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.47604,37.32647],[38.47623,37.32728],[38.47653,37.32813],[38.4766,37.32859],[38.47576,37.32857],[38.47514,37.32964],[38.4751,37.32968],[38.47475,37.32961],[38.47408,37.32935],[38.47334,37.32912],[38.47411,37.32779],[38.47419,37.32752],[38.47424,37.32736],[38.47413,37.32715],[38.47416,37.32703],[38.47471,37.3267],[38.47475,37.32665],[38.47604,37.32647]]]},"properties":{"no":51,"ada":133,"parsel":2,"tapu":60.929,"tasarruf":1.557,"kullanilan":1.557,"urun":"Antep Fıstığı","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"60.928,96","nitelik":"Tarla","mevkii":"","pafta":"N40b20b/D"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.47851,37.32043],[38.47731,37.31978],[38.47657,37.31938],[38.47664,37.3189],[38.47677,37.31846],[38.47684,37.31785],[38.47722,37.31794],[38.47745,37.31846],[38.47766,37.3187],[38.47865,37.31881],[38.47927,37.31864],[38.47976,37.31884],[38.47961,37.31967],[38.47943,37.31988],[38.47935,37.32039],[38.47851,37.32043]]]},"properties":{"no":52,"ada":133,"parsel":8,"tapu":44.595,"tasarruf":1.139,"kullanilan":1.139,"urun":"Antep Fıstığı","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"44.594,85","nitelik":"Fıstıklık","mevkii":"","pafta":"N40b20c"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.47766,37.3187],[38.47745,37.31846],[38.47722,37.31794],[38.47684,37.31785],[38.47687,37.31764],[38.47716,37.31687],[38.47771,37.31728],[38.4779,37.31785],[38.4781,37.31824],[38.47931,37.31836],[38.47927,37.31864],[38.47865,37.31881],[38.47766,37.3187]]]},"properties":{"no":53,"ada":133,"parsel":9,"tapu":17.672,"tasarruf":0.451,"kullanilan":0.316,"urun":"Antep Fıstığı","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"17.671,62","nitelik":"Tarla","mevkii":"","pafta":"N40b20c"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46864,37.33333],[38.46773,37.33342],[38.46727,37.33238],[38.46821,37.33216],[38.4684,37.33212],[38.46864,37.33333]]]},"properties":{"no":54,"ada":134,"parsel":1,"tapu":11.956,"tasarruf":0.746,"kullanilan":0.746,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"11.955,85","nitelik":"Tarla","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46559,37.32854],[38.46732,37.33025],[38.46905,37.33197],[38.4684,37.33212],[38.46821,37.33216],[38.46727,37.33238],[38.46643,37.33046],[38.46559,37.32854]]]},"properties":{"no":55,"ada":134,"parsel":2,"tapu":37.031,"tasarruf":2.313,"kullanilan":2.313,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"37.030,68","nitelik":"Tarla","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46792,37.33661],[38.46695,37.33614],[38.46685,37.33609],[38.46886,37.33641],[38.46924,37.33728],[38.46874,37.33702],[38.46792,37.33661]]]},"properties":{"no":56,"ada":135,"parsel":1,"tapu":7.892,"tasarruf":0.492,"kullanilan":0.492,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"7.892,20","nitelik":"Tarla","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46825,37.33502],[38.46853,37.33566],[38.46632,37.33555],[38.4663,37.335],[38.46825,37.33502]]]},"properties":{"no":57,"ada":135,"parsel":2,"tapu":12.153,"tasarruf":0.759,"kullanilan":0.759,"urun":"Antep Fıstığı","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"12.153,49","nitelik":"Fıstıklık","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46356,37.33448],[38.46262,37.33402],[38.46201,37.33372],[38.46228,37.33326],[38.46265,37.33321],[38.46385,37.33308],[38.46438,37.33307],[38.466,37.33288],[38.46712,37.33244],[38.46758,37.33349],[38.46825,37.33502],[38.4663,37.335],[38.46632,37.33555],[38.46853,37.33566],[38.46886,37.33641],[38.46685,37.33609],[38.46598,37.33566],[38.46506,37.33522],[38.46425,37.33481],[38.46356,37.33448]]]},"properties":{"no":58,"ada":135,"parsel":3,"tapu":118.454,"tasarruf":7.402,"kullanilan":7.402,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"118.453,97","nitelik":"Tarla","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46438,37.33307],[38.46385,37.33308],[38.46265,37.33321],[38.46254,37.3316],[38.46242,37.33],[38.463,37.32939],[38.4638,37.32851],[38.46473,37.32749],[38.46489,37.32733],[38.46545,37.32861],[38.46601,37.32988],[38.46657,37.33116],[38.46712,37.33244],[38.466,37.33288],[38.46438,37.33307]]]},"properties":{"no":59,"ada":135,"parsel":4,"tapu":168.541,"tasarruf":10.533,"kullanilan":10.533,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"168.540,83","nitelik":"Tarla","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46078,37.33229],[38.46043,37.33213],[38.46129,37.33122],[38.46147,37.33102],[38.46176,37.33124],[38.46078,37.33229]]]},"properties":{"no":60,"ada":135,"parsel":6,"tapu":5.284,"tasarruf":0.329,"kullanilan":0.329,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"5.284,22","nitelik":"Tarla","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.47057,37.3344],[38.47025,37.33327],[38.47007,37.33231],[38.47082,37.33207],[38.47112,37.3322],[38.4715,37.3322],[38.47154,37.33234],[38.47115,37.33272],[38.47155,37.33426],[38.47057,37.3344]]]},"properties":{"no":61,"ada":136,"parsel":2,"tapu":23.219,"tasarruf":1.45,"kullanilan":1.45,"urun":"Antep Fıstığı","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"23.219,17","nitelik":"Tarla","mevkii":"","pafta":"N40b20b/C"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.46865,37.33343],[38.46898,37.33501],[38.46842,37.33502],[38.46777,37.33352],[38.46865,37.33343]]]},"properties":{"no":62,"ada":136,"parsel":4,"tapu":11.113,"tasarruf":0.694,"kullanilan":0.694,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"11.113,30","nitelik":"Fıstıklık","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.4689,37.33568],[38.46871,37.33567],[38.46842,37.33502],[38.46898,37.33501],[38.4689,37.33568]]]},"properties":{"no":63,"ada":136,"parsel":5,"tapu":2.43,"tasarruf":0.151,"kullanilan":0.151,"urun":"Antep Fıstığı","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"2.430,12","nitelik":"Tarla","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.47021,37.33772],[38.46944,37.33733],[38.46897,37.33626],[38.4713,37.33663],[38.47362,37.337],[38.47492,37.3372],[38.4738,37.33815],[38.47268,37.33909],[38.47229,37.33884],[38.47107,37.33815],[38.47021,37.33772]]]},"properties":{"no":64,"ada":136,"parsel":6,"tapu":77.472,"tasarruf":4.841,"kullanilan":4.519,"urun":"Antep Fıstığı","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"77.472,12","nitelik":"Tarla","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.47405,37.33808],[38.47474,37.3375],[38.47434,37.33872],[38.47395,37.33993],[38.47368,37.33975],[38.47277,37.33916],[38.47405,37.33808]]]},"properties":{"no":65,"ada":137,"parsel":1,"tapu":17.067,"tasarruf":1.066,"kullanilan":1.066,"urun":"Antep Fıstığı","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"17.066,73","nitelik":"Tarla","mevkii":"","pafta":"N40b20a"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.47842,37.3344],[38.4786,37.33425],[38.48012,37.33433],[38.48164,37.33441],[38.48098,37.33565],[38.48003,37.33657],[38.47906,37.3375],[38.47784,37.33741],[38.47815,37.33553],[38.47819,37.33493],[38.47842,37.3344]]]},"properties":{"no":66,"ada":137,"parsel":4,"tapu":76.86,"tasarruf":4.803,"kullanilan":4.803,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"76.860,26","nitelik":"Tarla","mevkii":"","pafta":"N40b20a/B"}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[38.4786,37.33425],[38.47872,37.33415],[38.47937,37.33361],[38.48196,37.3337],[38.48164,37.33441],[38.48012,37.33433],[38.4786,37.33425]]]},"properties":{"no":67,"ada":137,"parsel":5,"tapu":19.535,"tasarruf":1.22,"kullanilan":1.22,"urun":"Arpa","mulkiyet":"KR","mahalle":"KARAKAŞ","tkgm_alan":"19.534,69","nitelik":"Tarla","mevkii":"","pafta":"N40b20a/B"}}]};
 const COL = { 'Antep Fıstığı':'#e0a526', 'Arpa':'#3fb6e8' };
+const MULK = { 'KM':'Kendi malı', 'KR':'Kira', 'KM / KR':'Kendi malı + Kira' };
 const fmt = n => n.toLocaleString('tr-TR',{minimumFractionDigits:3,maximumFractionDigits:3});
+const koyAd = m => m==='KARAKAŞ' ? 'Karakaş' : 'Dokuzağaç';
 const feats = PARSELLER.features;
+const $ = id => document.getElementById(id);
+const sheet=$('sheet'), head=$('head'), detail=$('detail');
+const mobile = () => matchMedia('(max-width:767px)').matches;
 
-const map = L.map('map',{zoomControl:true});
+/* ---------- Harita ---------- */
+const map = L.map('map',{ zoomControl:false, attributionControl:false, tap:true });
+L.control.zoom({position:'topleft'}).addTo(map);
+L.control.attribution({position:'topright', prefix:'<a href="https://leafletjs.com">Leaflet</a>'}).addTo(map);
 const uydu = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:20,maxNativeZoom:19,attribution:'Esri World Imagery'}).addTo(map);
 const etiket = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:20,maxNativeZoom:19}).addTo(map);
 const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20,maxNativeZoom:19,attribution:'© OpenStreetMap'});
-L.control.layers({'Uydu':uydu,'Harita (OSM)':osm},{'Yer adları':etiket}).addTo(map);
-L.control.scale({imperial:false}).addTo(map);
+L.control.layers({'Uydu':uydu,'Harita':osm},{'Yer adları':etiket},{position:'topright'}).addTo(map);
+L.control.scale({imperial:false, position:'bottomleft'}).addTo(map);
 
-// Konumum butonu (telefonda tarlada neredeyim)
-let meMarker=null, meCircle=null, following=false;
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.hidden=false; clearTimeout(toast.h); toast.h=setTimeout(()=>t.hidden=true,3500); }
+
+// Konumum
+let meMarker=null, meCircle=null, follow=false;
 const loc = L.control({position:'topleft'});
-loc.onAdd = () => { const b=L.DomUtil.create('button','locbtn'); b.title='Konumum'; b.innerHTML='&#9678;';
+loc.onAdd = () => { const b=L.DomUtil.create('button','mapbtn'); b.title='Konumum'; b.setAttribute('aria-label','Konumum');
+  b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>';
   L.DomEvent.disableClickPropagation(b);
-  b.onclick=()=>{ following=true; b.classList.add('on'); map.locate({watch:true,enableHighAccuracy:true}); };
+  b.onclick=()=>{ follow=true; b.classList.add('on'); toast('Konum alınıyor…'); map.locate({watch:true,enableHighAccuracy:true}); };
   return b; };
 loc.addTo(map);
 map.on('locationfound',e=>{
-  if(!meMarker){ meCircle=L.circle(e.latlng,{radius:e.accuracy,color:'#1a73e8',weight:1,fillOpacity:.12}).addTo(map);
-    meMarker=L.circleMarker(e.latlng,{radius:7,color:'#fff',weight:2,fillColor:'#1a73e8',fillOpacity:1}).addTo(map); }
+  $('toast').hidden=true;
+  if(!meMarker){ meCircle=L.circle(e.latlng,{radius:e.accuracy,color:'#1a73e8',weight:1,fillOpacity:.12,interactive:false}).addTo(map);
+    meMarker=L.circleMarker(e.latlng,{radius:8,color:'#fff',weight:3,fillColor:'#1a73e8',fillOpacity:1,interactive:false}).addTo(map); }
   else { meMarker.setLatLng(e.latlng); meCircle.setLatLng(e.latlng).setRadius(e.accuracy); }
-  if(following){ map.setView(e.latlng,Math.max(map.getZoom(),17)); following=false; }
+  if(follow){ follow=false; map.setView(e.latlng, Math.max(map.getZoom(),17)); }
 });
-map.on('locationerror',e=>alert('Konum alınamadı: '+e.message));
+map.on('locationerror',()=>toast('Konum alınamadı. Telefonda konum iznini aç.'));
 
-const legend = L.control({position:'bottomright'});
-legend.onAdd = () => { const d=L.DomUtil.create('div','legend');
-  d.innerHTML = Object.entries(COL).map(([k,c])=>`<div><span class="dot" style="background:${c}"></span>${k}</div>`).join(''); return d; };
-legend.addTo(map);
-
+/* ---------- Parseller ---------- */
 const style = f => ({ color:'#fff', weight:2, fillColor:COL[f.properties.urun], fillOpacity:.55 });
 const byNo = {};
 const layer = L.geoJSON(PARSELLER,{
   style,
   onEachFeature:(f,l)=>{
     const p=f.properties; byNo[p.no]=l;
-    l.bindTooltip(`${p.ada}/${p.parsel}`,{permanent:true,direction:'center',className:'lbl'});
-    l.bindPopup(`<b>${p.mahalle} · Ada ${p.ada} / Parsel ${p.parsel}</b><table class="pop">
-      <tr><td>ÇKS sıra</td><td>${p.no}</td></tr>
-      <tr><td>Ürün</td><td>${p.urun}</td></tr>
-      <tr><td>Tapu alanı</td><td>${fmt(p.tapu)} da</td></tr>
-      <tr><td>Tasarruf</td><td>${fmt(p.tasarruf)} da</td></tr>
-      <tr><td>Kullanılan</td><td>${fmt(p.kullanilan)} da</td></tr>
-      <tr><td>Mülkiyet</td><td>${p.mulkiyet}</td></tr>
-      <tr><td>Nitelik</td><td>${p.nitelik||'-'}</td></tr>
-      <tr><td>Pafta</td><td>${p.pafta||'-'}</td></tr></table>`);
-    l.on('click',()=>highlight(p.no,false));
+    l.bindTooltip(`${p.ada}/${p.parsel}`,{permanent:true,direction:'center',className:'lbl',interactive:false});
+    l.on('click',ev=>{ L.DomEvent.stop(ev); select(p.no,{fly:false}); });
   }
 }).addTo(map);
-map.fitBounds(layer.getBounds(),{padding:[20,20]});
+const labels=()=>{ const z=map.getZoom(); layer.eachLayer(l=>{ if(l._hidden) return l.closeTooltip(); z>=15?l.openTooltip():l.closeTooltip(); }); };
+map.on('zoomend',labels);
 
-// label sadece yakın zoomda
-const toggleLabels=()=>{ const z=map.getZoom(); layer.eachLayer(l=>{ const t=l.getTooltip(); if(!t) return; z>=15?l.openTooltip():l.closeTooltip(); }); };
-map.on('zoomend',toggleLabels); toggleLabels();
-
-let active=null, filt='all', q='';
-function highlight(no, fly=true){
-  if(active) layer.resetStyle(byNo[active]);
-  active=no; const l=byNo[no];
-  l.setStyle({color:'#ff2d55',weight:4,fillOpacity:.7}); l.bringToFront();
-  if(fly){ map.flyToBounds(l.getBounds(),{maxZoom:17,duration:.6}); setTimeout(()=>l.openPopup(),650); }
-  document.querySelectorAll('.row').forEach(r=>r.classList.toggle('active',+r.dataset.no===no));
-  const r=document.querySelector(`.row[data-no="${no}"]`); if(r) r.scrollIntoView({block:'nearest'});
+/* ---------- Alt panel konumları ---------- */
+let state='collapsed';
+function positions(){
+  const H=sheet.offsetHeight, peek=head.offsetHeight+(detail.hidden?0:detail.offsetHeight+10);
+  return { collapsed:Math.max(0,H-peek), half:Math.max(0,H-innerHeight*0.55), full:0 };
 }
-function render(){
+function curY(){ const m=new DOMMatrix(getComputedStyle(sheet).transform); return m.m42; }
+function setState(s){ state=s; sheet.style.transform = mobile()?`translateY(${positions()[s]}px)`:''; }
+function visibleSheet(){ return mobile() ? sheet.offsetHeight-positions()[state] : 0; }
+function padOpts(maxZoom){ return { paddingTopLeft:[24, 24], paddingBottomRight:[24, 24+visibleSheet()], maxZoom }; }
+
+// Sürükleme
+let drag=null;
+head.addEventListener('pointerdown',e=>{ if(!mobile()) return; drag={y:e.clientY, t:curY(), moved:false}; sheet.classList.add('dragging'); head.setPointerCapture(e.pointerId); });
+head.addEventListener('pointermove',e=>{ if(!drag) return; const dy=e.clientY-drag.y; if(Math.abs(dy)>5) drag.moved=true;
+  const y=Math.min(Math.max(drag.t+dy,0),positions().collapsed); sheet.style.transform=`translateY(${y}px)`; });
+head.addEventListener('pointerup',e=>{ if(!drag) return; sheet.classList.remove('dragging'); const dy=e.clientY-drag.y, order=['collapsed','half','full'];
+  let i=order.indexOf(state);
+  if(!drag.moved) i = state==='collapsed'?1:0;
+  else if(dy<-40) i=Math.min(2,i+1); else if(dy>40) i=Math.max(0,i-1);
+  drag=null; setState(order[i]); });
+head.addEventListener('pointercancel',()=>{ drag=null; sheet.classList.remove('dragging'); setState(state); });
+addEventListener('resize',()=>setState(state));
+
+/* ---------- Seçim ---------- */
+let active=null;
+function select(no,{fly=true}={}){
+  if(active && byNo[active]) layer.resetStyle(byNo[active]);
+  active=no; const l=byNo[no], p=l.feature.properties, c=l.getBounds().getCenter();
+  l.setStyle({color:'#ff2d55',weight:4,fillOpacity:.7}); l.bringToFront();
+  detail.innerHTML=`
+    <div class="dhead"><span class="dot" style="background:${COL[p.urun]}"></span><b>Ada ${p.ada} / Parsel ${p.parsel}</b><span class="koy">${koyAd(p.mahalle)}</span>
+      <button class="x" id="dclose" aria-label="Kapat">×</button></div>
+    <div class="dgrid">
+      <div><span>Kullanılan</span><b>${fmt(p.kullanilan)}</b></div>
+      <div><span>Tasarruf</span><b>${fmt(p.tasarruf)}</b></div>
+      <div><span>Tapu</span><b>${fmt(p.tapu)}</b></div>
+    </div>
+    <div class="dmeta">${p.urun} · ${MULK[p.mulkiyet]||p.mulkiyet} · ${p.nitelik||'-'} · Pafta ${p.pafta||'-'} · alanlar dekar</div>
+    <div class="dact">
+      <a class="primary" href="https://www.google.com/maps/dir/?api=1&destination=${c.lat.toFixed(6)},${c.lng.toFixed(6)}" target="_blank" rel="noopener">Yol tarifi</a>
+      <button id="dzoom">Parsele git</button>
+    </div>`;
+  detail.hidden=false;
+  $('dclose').onclick=clearSel;
+  $('dzoom').onclick=()=>map.flyToBounds(l.getBounds(),{...padOpts(18),duration:.6});
+  document.querySelectorAll('.row').forEach(r=>r.classList.toggle('active',+r.dataset.no===no));
+  setState('collapsed');
+  const target=()=>{ if(fly) map.flyToBounds(l.getBounds(),{...padOpts(17),duration:.6});
+    else { const pt=map.latLngToContainerPoint(c), h=map.getSize().y-visibleSheet(); if(pt.y>h-30||pt.y<30) map.panBy([0, pt.y-h/2]); } };
+  mobile()?setTimeout(target,320):target();
+}
+function clearSel(){ if(active && byNo[active]) layer.resetStyle(byNo[active]); active=null; detail.hidden=true;
+  document.querySelectorAll('.row.active').forEach(r=>r.classList.remove('active')); setState(state); }
+map.on('click',()=>{ if(!detail.hidden) clearSel(); });
+
+/* ---------- Liste / filtre ---------- */
+let filt='all', q='';
+function render(refit){
   const vis=feats.filter(f=>{const p=f.properties;
     const okF = filt==='all'||p.urun===filt||p.mahalle===filt;
-    const okQ = !q || `${p.ada}/${p.parsel}`.startsWith(q.replace(/\s/g,'')) || String(p.ada)===q;
+    const s=q.replace(/\s/g,'');
+    const okQ = !s || `${p.ada}/${p.parsel}`.startsWith(s) || (!s.includes('/') && String(p.ada).startsWith(s));
     return okF&&okQ;});
   const set=new Set(vis.map(f=>f.properties.no));
-  layer.eachLayer(l=>{ const on=set.has(l.feature.properties.no); l.setStyle(on?style(l.feature):{opacity:0,fillOpacity:0}); on?(map.getZoom()>=15&&l.openTooltip()):l.closeTooltip(); });
-  document.getElementById('list').innerHTML = vis.map(f=>{const p=f.properties;
-    return `<div class="row" data-no="${p.no}"><span class="dot" style="background:${COL[p.urun]}"></span>
-      <span class="ap">${p.ada}/${p.parsel}</span><span class="meta">${p.mahalle==='KARAKAŞ'?'Karakaş':'Dokuzağaç'} · ${p.urun}</span>
-      <span class="da">${fmt(p.kullanilan)}</span></div>`}).join('');
+  layer.eachLayer(l=>{ const on=set.has(l.feature.properties.no); l._hidden=!on;
+    if(on){ l.setStyle(l.feature.properties.no===active?{color:'#ff2d55',weight:4,fillOpacity:.7}:style(l.feature)); }
+    else l.setStyle({opacity:0,fillOpacity:0}); });
+  labels();
+  $('list').innerHTML = vis.length ? vis.map(f=>{const p=f.properties;
+    return `<div class="row${p.no===active?' active':''}" data-no="${p.no}"><span class="dot" style="background:${COL[p.urun]}"></span>
+      <span class="ap">${p.ada}/${p.parsel}</span><span class="meta">${koyAd(p.mahalle)} · ${p.urun}</span>
+      <span class="da">${fmt(p.kullanilan)} <small>da</small></span></div>`}).join('') : '<div class="empty">Bu aramaya uyan parsel yok.</div>';
   const sum=k=>vis.filter(f=>!k||f.properties.urun===k).reduce((a,f)=>a+f.properties.kullanilan,0);
-  sCount.textContent=vis.length; sArea.textContent=fmt(sum()); sFistik.textContent=fmt(sum('Antep Fıstığı')); sArpa.textContent=fmt(sum('Arpa'));
-  if(vis.length && vis.length<feats.length){ map.fitBounds(L.featureGroup(vis.map(f=>byNo[f.properties.no])).getBounds(),{padding:[20,20],maxZoom:17}); }
+  $('sCount').textContent=vis.length; $('sArea').textContent=fmt(sum()); $('sFistik').textContent=fmt(sum('Antep Fıstığı')); $('sArpa').textContent=fmt(sum('Arpa'));
+  if(refit && vis.length) map.fitBounds(L.featureGroup(vis.map(f=>byNo[f.properties.no])).getBounds(), padOpts(17));
 }
-document.getElementById('list').addEventListener('click',e=>{const r=e.target.closest('.row'); if(r) highlight(+r.dataset.no);});
-document.getElementById('filters').addEventListener('click',e=>{const b=e.target.closest('button'); if(!b) return;
-  filt=b.dataset.f; document.querySelectorAll('#filters button').forEach(x=>x.classList.toggle('on',x===b)); render(); if(filt==='all') map.fitBounds(layer.getBounds(),{padding:[20,20]});});
-document.getElementById('search').addEventListener('input',e=>{q=e.target.value.trim(); render();});
-render();
+$('list').addEventListener('click',e=>{const r=e.target.closest('.row'); if(r){ $('search').blur(); select(+r.dataset.no); }});
+$('filters').addEventListener('click',e=>{const b=e.target.closest('button'); if(!b) return;
+  filt=b.dataset.f; document.querySelectorAll('#filters button').forEach(x=>x.classList.toggle('on',x===b)); render(true);});
+$('search').addEventListener('input',e=>{q=e.target.value.trim(); render(q.length>0);});
+$('search').addEventListener('focus',()=>{ if(mobile()) setState('full'); });
+
+/* ---------- Başlangıç ---------- */
+render(false);
+setState('collapsed');
+map.fitBounds(layer.getBounds(), padOpts(17));
+labels();
 </script>
 </body>
 </html>
